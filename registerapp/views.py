@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login as auth_login, logout, authenticate
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -9,6 +9,8 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core.exceptions import ValidationError
 import requests
+from captcha.fields import ReCaptchaField
+from captcha.helpers import verify_captcha
 from django_ratelimit.decorators import ratelimit
 from ipware import get_client_ip
 from .forms import RegisterForm, LoginForm
@@ -60,13 +62,13 @@ def register_detail(request, user_id):
 @ratelimit(key='ip', rate='10/m', block=True)
 def login(request):
     if request.method == 'POST':
-        form = LoginForm(request.POST)
+        form = LoginForm(request, request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
             user = authenticate(request, username=username, password=password)
             if user is not None:
-                login(request, user)
+                auth_login(request, user)
                 # Check for 2FA via email
                 email = user.email
                 if email:
@@ -85,7 +87,7 @@ def login(request):
                 messages.error(request, 'Invalid username or password')
                 return redirect('login')
     else:
-        form = LoginForm()
+        form = LoginForm(request)
     context = {
         'form': form,
     }
