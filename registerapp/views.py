@@ -7,10 +7,7 @@ from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
-from django.core.exceptions import ValidationError
-import requests
 from captcha.fields import ReCaptchaField
-from captcha.helpers import verify_captcha
 from django_ratelimit.decorators import ratelimit
 from ipware import get_client_ip
 from .forms import RegisterForm, LoginForm
@@ -28,11 +25,9 @@ def register(request):
             else:
                 # check the reCAPTCHA
                 captcha_response = request.POST.get('g-recaptcha-response')
-                data = {'secret': settings.RECAPTCHA_SECRET_KEY, 'response': captcha_response}
-                resp = requests.post('https://www.google.com/recaptcha/api/siteverify', data=data)
-                result_json = resp.json()
-                if not result_json.get('success'):
-                    raise ValidationError('Invalid reCAPTCHA. Please try again.')
+                recaptcha_field = ReCaptchaField()
+                recaptcha_field.clean(captcha_response)
+
             form.save()
             return redirect('/')
     else:
@@ -62,32 +57,40 @@ def register_detail(request, user_id):
 @ratelimit(key='ip', rate='10/m', block=True)
 def login(request):
     if request.method == 'POST':
-        form = LoginForm(request, request.POST)
+        form = LoginForm(request.POST, request=request)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                auth_login(request, user)
-                # Check for 2FA via email
-                email = user.email
-                if email:
-                    # Generate and send OTP via email
-                    otp = get_random_string(length=6, allowed_chars='0123456789')
-                    cache.set(email, otp, timeout=300)  # Store OTP in cache for 5 minutes
-                    subject = 'Login OTP for your account'
-                    message = f'Your one time password is {otp}. This OTP is valid for 5 minutes only.'
-                    from_email = settings.DEFAULT_FROM_EMAIL
-                    recipient_list = [email]
-                    send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-                    return redirect('verify_otp')
+            # Validate the reCAPTCHA field
+            if form.cleaned_data.get('captcha'):
+                # ReCAPTCHA validation passed
+                username = form.cleaned_data.get('username')
+                password = form.cleaned_data.get('password')
+                user = authenticate(request, username=username, password=password)
+                if user is not None:
+                    auth_login(request, user)
+                    # Check for 2FA via email
+                    email = user.email
+                    if email:
+                        # Generate and send OTP via email
+                        otp = get_random_string(length=6, allowed_chars='0123456789')
+                        cache.set(email, otp, timeout=300)  # Store OTP in cache for 5 minutes
+                        subject = 'Login OTP for your account'
+                        message = f'Your one time password is {otp}. This OTP is valid for 5 minutes only.'
+                        from_email = settings.DEFAULT_FROM_EMAIL
+                        recipient_list = [email]
+                        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+                        return redirect('verify_otp')
+                    else:
+                        return redirect('home')
                 else:
-                    return redirect('home')
+                    messages.error(request, 'Invalid username or password')
             else:
-                messages.error(request, 'Invalid username or password')
-                return redirect('login')
+                # ReCAPTCHA validation failed
+                messages.error(request, 'Invalid reCAPTCHA. Please try again.')
+        else:
+            messages.error(request, 'Error input. Please try again.')
+            # Handle form validation errors
     else:
-        form = LoginForm(request)
+        form = LoginForm(request=request)
     context = {
         'form': form,
     }

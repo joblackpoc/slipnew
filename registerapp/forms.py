@@ -6,7 +6,6 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from .models import ProfileUser
 from captcha.fields import ReCaptchaField
-from captcha.widgets import ReCaptchaV3
 from django_ratelimit.decorators import ratelimit
 
 class RegisterForm(UserCreationForm):
@@ -14,7 +13,7 @@ class RegisterForm(UserCreationForm):
     phone = forms.CharField(max_length=20, label=('เบอร์โทรศัพท์มือถือ'), widget=forms.TextInput(attrs={'placeholder': ('กรอกเบอร์โทรศัพท์มือถือ 10 หลัก')}))
     first_name = forms.CharField(max_length=150, label=('ชื่อตามบัตรประชาชน'), widget=forms.TextInput(attrs={'placeholder': ('ชื่อตามบัตรประชาชน ไม่กรอกคำนำหน้าชื่อ')}))
     last_name = forms.CharField(max_length=150, label=('นามสกุลตามบัตรประชาชน'), widget=forms.TextInput(attrs={'placeholder': ('นามสกุลตามบัตรประชาชน')}))
-    captcha = ReCaptchaField(widget=ReCaptchaV3)
+    captcha = ReCaptchaField()
 
     class Meta:
         model = User
@@ -40,6 +39,7 @@ class RegisterForm(UserCreationForm):
 class LoginForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
-    
+    captcha = ReCaptchaField()
+       
     def __init__(self, *args, **kwargs):
         super().__init__( *args, **kwargs)
