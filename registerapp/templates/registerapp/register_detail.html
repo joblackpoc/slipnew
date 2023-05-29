@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+  <h1>Registration Details</h1>
+  <table class="table table-striped">
+    <tbody>
+      <tr>
+        <th scope="row">First Name</th>
+        <td>{{ user.first_name }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Last Name</th>
+        <td>{{ user.last_name }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Email</th>
+        <td>{{ user.email }}</td>
+      </tr>
+      <tr>
+        <th scope="row">CID</th>
+        <td>{{ profile.cid }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Phone</th>
+        <td>{{ profile.phone }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

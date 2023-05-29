@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load django_bootstrap5 %}
+{% block content %}
+  <h2>Profile Detail</h2>
+  <ul>
+    <li><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</li>
+    <li><strong>Email:</strong> {{ user.email }}</li>
+    <li><strong>CID:</strong> {{ CID }}</li>
+    <li><strong>Phone Number:</strong> {{ Phone_number }}</li>
+  </ul>
+  <a href="{% url 'login_app:update_profile' %}">Edit Profile</a>
+{% endblock %}
